@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+*.tmp
+catalog.tmp
+.venv/
+# generated test output
+*.magic
+frame*.png
