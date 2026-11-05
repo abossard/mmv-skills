@@ -29,7 +29,18 @@ Claude Code skills for generating, editing and verifying Magic Music Visuals sce
   - `python3 mmv-shaders-isf-glsl/scripts/isf_lint.py [--params] [--strict] X.fs` lints a shader.
   - `MMV_AUDIO_DEVICE` (or `--audio-device`) sets the audio input of `retro_sunset_example.py`; `MMV_MODULE_DIRS` adds ISF folders for `check`/`catalog`; `MMV_ALLOW_LIVE=1` is the env form of `--yes`.
 
-Get the skills: `git clone https://github.com/abossard/mmv-skills && cd mmv-skills`. Install into Claude Code (symlinks, keeps sibling paths working; existing links are replaced, a real folder of the same name is skipped, uninstall by deleting the links):
+Install with [`npx skills`](https://github.com/vercel-labs/skills) (all 10 skills, into the current project's `.claude/skills`):
+
+```bash
+npx skills add abossard/mmv-skills -a claude-code
+npx skills add abossard/mmv-skills -a claude-code -g   # user-wide (~/.claude/skills) instead
+npx skills add abossard/mmv-skills --list              # list the skills without installing
+```
+
+- Install all of them. The skills call each other's scripts as siblings (`../mmv-core/scripts/...`) and `mmv-core` holds the shared tooling, so `--skill` with a subset breaks those paths.
+- Remove: `npx skills remove`. Update: `npx skills update`.
+
+Or clone: `git clone https://github.com/abossard/mmv-skills && cd mmv-skills`. Then install into Claude Code (symlinks, keeps sibling paths working; existing links are replaced, a real folder of the same name is skipped, uninstall by deleting the links):
 
 ```bash
 ./install.sh            # links every mmv-* folder into ~/.claude/skills
