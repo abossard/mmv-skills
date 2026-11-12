@@ -1,0 +1,918 @@
+<title>Music X-Ray</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky transport with the song map, then a two-column gallery of concept cards (one column on phones). Single dark look: it is a VJ screen. */
+:root {
+  --bg: #0c0b16;
+  --panel: #14122a;
+  --panel-2: #1b1836;
+  --line: #2b2848;
+  --fg: #ecebff;
+  --muted: #9c98c4;
+  --accent: #ff4f6e;
+  /* instruments and bands */
+  --sub: #ff4f6e;
+  --kick: #ff9248;
+  --snare: #ffd166;
+  --presence: #6fe3a1;
+  --hats: #63c7ff;
+  --lead: #c39bff;
+  /* live sections */
+  --s-intro: #7f8cff;
+  --s-groove: #9aa0c8;
+  --s-buildup: #ffb347;
+  --s-drop: #ff4f6e;
+  --s-breakdown: #3fd0c9;
+  --s-outro: #8f84b8;
+  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.intro { padding-block: 28px 18px; display: grid; gap: 10px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 5vw, 46px); letter-spacing: -0.01em; margin: 0; line-height: 1.05; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { margin: 0; max-width: 68ch; color: var(--muted); }
+.lede b { color: var(--fg); font-weight: 600; }
+
+.transport { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.transport .wrap { padding-block: 10px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.buttons { display: flex; gap: 8px; }
+button { font: 500 13px var(--font-body); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button:focus-visible { outline: 2px solid var(--hats); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+#songmap { width: 100%; height: 38px; display: block; cursor: pointer; border-radius: 6px; }
+.readout { font-family: var(--font-mono); font-size: 12px; color: var(--muted); display: grid; grid-template-columns: auto auto; gap: 0 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.readout b { color: var(--fg); font-weight: 500; }
+@media (max-width: 720px) {
+  .transport .wrap { grid-template-columns: auto minmax(0, 1fr); }
+  .readout { grid-column: 1 / -1; grid-template-columns: repeat(4, auto); justify-content: start; }
+  #songmap { grid-column: 1 / -1; grid-row: 2; }
+}
+
+main { padding-block: 22px 40px; }
+.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 820px) { .gallery { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: grid; min-width: 0; }
+.card.wide { grid-column: 1 / -1; }
+.card header { padding: 14px 16px 10px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.card h2 { font-family: var(--font-display); font-weight: 500; font-size: 17px; margin: 0; letter-spacing: 0.01em; }
+.tag { font-family: var(--font-mono); font-size: 11px; color: var(--bg); background: var(--fg); border-radius: 4px; padding: 1px 6px; letter-spacing: 0.04em; }
+.card canvas { width: 100%; aspect-ratio: 16 / 10; display: block; background: var(--bg); }
+.card.wide canvas { aspect-ratio: 21 / 8; }
+@media (max-width: 820px) { .card.wide canvas { aspect-ratio: 16 / 10; } }
+.card .text { padding: 12px 16px 16px; display: grid; gap: 8px; }
+.card p { margin: 0; max-width: 70ch; }
+.card p.teach { color: var(--fg); }
+.card p.how { color: var(--muted); font-size: 13.5px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; }
+footer { color: var(--muted); font-size: 13px; padding-block: 0 40px; }
+footer p { margin: 0 0 6px; max-width: 80ch; }
+</style>
+
+<header class="intro wrap">
+  <h1>Music <span>X-Ray</span></h1>
+  <p class="lede">Seven ways to show what Magic Music Visuals can hear in a track, from the audio alone. Each panel is a concept to comment on. All of them run on one <b>simulated 126 BPM track in A minor</b> with an intro, two buildups, two drops and a breakdown, so you can see every detector react. Press <b>Sound</b> to hear the track the visuals are following.</p>
+</header>
+
+<div class="transport">
+  <div class="wrap">
+    <div class="buttons">
+      <button id="play" type="button" aria-pressed="true">Pause</button>
+      <button id="sound" type="button" aria-pressed="false">Sound</button>
+    </div>
+    <canvas id="songmap" aria-label="Song map: click to jump to a point in the track"></canvas>
+    <div class="readout" aria-live="off">
+      <span>time <b id="r-time">0:00</b></span><span>bar <b id="r-bar">1.1</b></span>
+      <span>tempo <b id="r-bpm">120.0</b></span><span>heard <b id="r-state">intro</b></span>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="gallery">
+    <article class="card" id="c-orbit">
+      <header><span class="tag">A</span><h2>Beat Orbit</h2></header>
+      <canvas data-draw="orbit" aria-label="Beat Orbit animation"></canvas>
+      <div class="text">
+        <p class="teach">The bar is an orbit and the planet is "now". Each kick nudges the planet back onto its beat marker; between kicks it keeps going on its own. When the kick stops, the orbit turns dashed: the clock is free-running on its last tempo.</p>
+        <p class="how">The big marker is bar 1. Live audio cannot know where bar 1 is, so it is a guess until the first drop sets it. The outer ring counts bars since the last drop.</p>
+        <div class="chips"><span class="chip">Freq. Range 20–80 Hz</span><span class="chip">Globals: KickPulse, Phase, Bpm, Lock</span><span class="chip">Dt</span></div>
+      </div>
+    </article>
+
+    <article class="card" id="c-terrain">
+      <header><span class="tag">B</span><h2>Spectral Terrain</h2></header>
+      <canvas data-draw="terrain" aria-label="Spectral Terrain animation"></canvas>
+      <div class="text">
+        <p class="teach">The spectrum as a landscape that flows towards you. Left is low (sub-bass, kick), right is high (hats, air). Watch the left hills vanish in the breakdown and the right side rise during a buildup.</p>
+        <p class="how">Labels pop up over the hill that each instrument makes, so you learn where a kick or a hat lives in the frequency range.</p>
+        <div class="chips"><span class="chip">Iterator Freqs</span><span class="chip">5 fixed bands</span><span class="chip">ISF persistent buffer for history</span></div>
+      </div>
+    </article>
+
+    <article class="card wide" id="c-river">
+      <header><span class="tag">C</span><h2>Song River</h2></header>
+      <canvas data-draw="river" aria-label="Song River animation"></canvas>
+      <div class="text">
+        <p class="teach">The track so far as a river: width is loudness, colour is what the live detector thinks is happening. Pins mark the moments it noticed, with the reason. The thin strip on top is the real structure, which a live detector never sees ahead of time.</p>
+        <p class="how">Compare the strip with the river to see where live detection lags (a buildup is only certain after about two bars) and where it is right on the beat (the drop).</p>
+        <div class="chips"><span class="chip">Energy, EnergySlow</span><span class="chip">Sub-bass band</span><span class="chip">Section state Global</span><span class="chip">ISF persistent buffer</span></div>
+      </div>
+    </article>
+
+    <article class="card" id="c-radar">
+      <header><span class="tag">D</span><h2>Drop Radar</h2></header>
+      <canvas data-draw="radar" aria-label="Drop Radar animation"></canvas>
+      <div class="text">
+        <p class="teach">Shows the detector's reasoning. Three cues build tension: the sub-bass has been out for bars, the sound gets brighter, the snare roll gets denser. When the sub-bass comes back on a bar line, that is the drop.</p>
+        <p class="how">Tuned on the user's 189 tracks: the sub-bass step (0.2 to 0.76) is the most reliable drop cue. A silent kick before the drop happens in fewer than half of them.</p>
+        <div class="chips"><span class="chip">Sub-bass band</span><span class="chip">Tone</span><span class="chip">1.2–5 kHz onsets</span><span class="chip">Expression modifiers</span></div>
+      </div>
+    </article>
+
+    <article class="card" id="c-anatomy">
+      <header><span class="tag">E</span><h2>Who's Playing</h2></header>
+      <canvas data-draw="anatomy" aria-label="Who's Playing animation"></canvas>
+      <div class="text">
+        <p class="teach">One shape per instrument, placed where you would feel it: the kick as a heart, the sub-bass as the floor, the snare as a burst, the hats as sparks overhead. Each shape lists the frequency range its detector listens to.</p>
+        <p class="how">Counters show how many hits each detector caught, so you can see the snare roll speed up in a buildup.</p>
+        <div class="chips"><span class="chip">Custom bands</span><span class="chip">Peak, Smooth</span><span class="chip">Trigger + Increase counters</span></div>
+      </div>
+    </article>
+
+    <article class="card" id="c-notes">
+      <header><span class="tag">F</span><h2>Note Wheel</h2></header>
+      <canvas data-draw="notes" aria-label="Note Wheel animation"></canvas>
+      <div class="text">
+        <p class="teach">The twelve notes around a circle. A trail follows the melody, and petals grow for notes that come back often, which reveals the key. In the breakdown the lead plays alone and the trail is clean. In a drop the bass and drums confuse the pitch detector, and the wheel shows that as scatter.</p>
+        <p class="how">The glow around the wheel is brightness (Tone), the cue that rises through a buildup.</p>
+        <div class="chips"><span class="chip">Best Pitch</span><span class="chip">Tone</span><span class="chip">Volume gate</span></div>
+      </div>
+    </article>
+
+    <article class="card" id="c-tempo">
+      <header><span class="tag">G</span><h2>Tempo Lens</h2></header>
+      <canvas data-draw="tempo" aria-label="Tempo Lens animation"></canvas>
+      <div class="text">
+        <p class="teach">How tempo is found: the time between kicks, collected into a histogram. The tall bar is the beat. Snare-roll hits in a buildup add short intervals at half the beat.</p>
+        <p class="how">Every interval becomes a BPM value and is doubled or halved until it lands in one tempo octave (here 90–180). That folding fixes half- and double-time readings. Pick the octave to match the set.</p>
+        <div class="chips"><span class="chip">KickPulse</span><span class="chip">Dt</span><span class="chip">Expression: interval, fold</span></div>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer class="wrap">
+  <p>Everything here is simulated in the browser: a model of what Magic's audio features and Globals would produce for this track, plus a small synthesizer for the sound. None of it is Magic output yet.</p>
+</footer>
+
+<script>
+(() => {
+"use strict";
+const TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const mod = (a, n) => ((a % n) + n) % n;
+const hash = n => { const s = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s); };
+const css = getComputedStyle(document.documentElement);
+const C = {};
+["bg","panel","panel-2","line","fg","muted","accent","sub","kick","snare","presence","hats","lead","s-intro","s-groove","s-buildup","s-drop","s-breakdown","s-outro"].forEach(k => C[k] = css.getPropertyValue("--" + k).trim());
+const rgba = (hex, a) => { const h = hex.replace("#", ""); const n = parseInt(h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+const FONT_MONO = css.getPropertyValue("--font-mono");
+const FONT_DISP = css.getPropertyValue("--font-display");
+const FONT_BODY = css.getPropertyValue("--font-body");
+const stateColor = s => C["s-" + s] || C["s-groove"];
+
+/* ---------- The track ---------- */
+const BPM = 126, SPB = 60 / BPM, BAR = SPB * 4, STEP = SPB / 4;
+const SECTIONS = [["intro", 16], ["buildup", 8], ["drop", 16], ["breakdown", 16], ["buildup", 8], ["drop", 16], ["outro", 8]];
+let acc = 0;
+const SECS = SECTIONS.map(([label, bars]) => { const s = { label, start: acc, bars }; acc += bars; return s; });
+const TOTAL_BARS = acc, SONG_LEN = TOTAL_BARS * BAR;
+const sectionAt = bar => SECS.find(s => bar >= s.start && bar < s.start + s.bars) || SECS[SECS.length - 1];
+const ROOTS = [33, 29, 36, 31];                    // A1 F1 C2 G1, one per bar
+const CHORDS = [[57, 60, 64], [53, 57, 60], [55, 60, 64], [55, 59, 62]];
+const MEL = [69,-1,72,-1,76,74,72,-1, 65,-1,69,-1,72,71,69,-1, 67,-1,72,-1,76,79,76,-1, 67,-1,71,-1,74,72,71,-1];
+const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const ftom = f => 69 + 12 * Math.log2(f / 440);
+const ROLL = [1, 1, 2, 2, 4, 4, 8, 8];
+
+function kickOn(sec, secBar) { return (sec.label === "intro" && secBar >= 4) || sec.label === "drop" || (sec.label === "outro" && secBar < 6); }
+function hatsOn(sec) { return sec.label === "intro" || sec.label === "drop" || sec.label === "outro"; }
+
+/* What the audio contains at time t (0..1 envelopes). */
+function features(t) {
+  const beatsF = t / SPB, beatIdx = Math.floor(beatsF), beatFrac = beatsF - beatIdx;
+  const barF = beatsF / 4, bar = Math.floor(barF);
+  const sec = sectionAt(bar), secBar = bar - sec.start, secProg = clamp((barF - sec.start) / sec.bars);
+  const L = sec.label, dtBeat = beatFrac * SPB;
+  const kick = kickOn(sec, secBar) ? Math.exp(-dtBeat / 0.09) : 0;
+  let hat = 0;
+  if (hatsOn(sec)) { const e = mod(beatsF + 0.5, 1) * SPB; hat = Math.exp(-e / 0.035) * (L === "drop" ? 1 : 0.7); }
+  let snare = 0, rollDiv = 0;
+  if (L === "drop") { const last = Math.floor((beatsF - 1) / 2) * 2 + 1; snare = last >= 0 ? Math.exp(-(beatsF - last) * SPB / 0.13) : 0; }
+  if (L === "buildup") { rollDiv = ROLL[Math.min(7, secBar)]; const last = Math.floor(beatsF * rollDiv) / rollDiv; snare = (0.4 + 0.6 * secProg) * Math.exp(-(beatsF - last) * SPB / (0.1 / Math.sqrt(rollDiv))); }
+  const root = ROOTS[mod(bar, 4)], subHz = mtof(root);
+  let sub = 0.05;
+  if (L === "drop") sub = 0.9 * (1 - 0.75 * kick);
+  else if (L === "intro") sub = secBar >= 8 ? 0.28 : 0.1;
+  else if (L === "buildup") sub = 0.04;
+  else if (L === "breakdown") sub = 0.12;
+  else if (L === "outro") sub = 0.25 * (1 - secProg);
+  let tone = 0.35;
+  if (L === "buildup") tone = 0.2 + 0.7 * Math.pow(secProg, 1.5);
+  else if (L === "drop") tone = 0.7; else if (L === "breakdown") tone = 0.3; else if (L === "outro") tone = 0.35 * (1 - secProg) + 0.15;
+  tone = clamp(tone + hat * 0.08 + snare * 0.05);
+  const riser = L === "buildup" ? secProg * secProg : 0;
+  const pad = { breakdown: 0.6, buildup: 0.3, drop: 0.25, intro: 0.2 }[L] || 0.1;
+  let crash = 0;
+  if (L === "drop") { const d1 = (barF - sec.start) * BAR, d2 = (barF - sec.start - 8) * BAR; crash = Math.max(d1 >= 0 ? Math.exp(-d1 / 1.2) : 0, d2 >= 0 ? Math.exp(-d2 / 1.2) : 0); }
+  // lead melody on eighths
+  let lead = 0, leadNote = -1;
+  const eighth = Math.floor(beatsF * 2), slot = mod(eighth, 32);
+  if (L === "breakdown" || L === "drop") {
+    leadNote = MEL[slot];
+    if (leadNote > 0) lead = (L === "breakdown" ? 0.8 : 0.55) * Math.exp(-((beatsF * 2) - eighth) * SPB / 2 / 0.25);
+  }
+  // what Best Pitch would report
+  let pitchHz = 0, pitchConf = 0;
+  if (lead > 0.15) {
+    pitchHz = mtof(leadNote); pitchConf = L === "breakdown" ? 0.9 : 0.4;
+    if (L === "drop") { const h = hash(Math.floor(beatsF * 4)); if (h < 0.3) { pitchHz = subHz * 2; pitchConf = 0.25; } else if (h < 0.45) { pitchHz = 180 + 900 * hash(eighth + 7); pitchConf = 0.2; } }
+  } else if (sub > 0.2) { pitchHz = subHz * 2; pitchConf = 0.3; }
+  const loud = clamp(0.45 * sub + 0.32 * kick + 0.12 * snare + 0.05 * hat + 0.18 * pad + 0.25 * riser + 0.12 * lead + 0.1 * crash + 0.05);
+  return { t, beatsF, barF, bar, sec, L, secBar, secProg, kick, hat, snare, rollDiv, sub, subHz, tone, riser, pad, crash, lead, leadNote, pitchHz, pitchConf, loud };
+}
+
+/* Model spectrum (48 log bins, 30 Hz..16 kHz) used when the sound is off. */
+const NB = 48, FMIN = 30, FMAX = 16000;
+const BINF = Array.from({ length: NB }, (_, i) => FMIN * Math.pow(FMAX / FMIN, i / (NB - 1)));
+const g = (f, c, w) => { const x = Math.log2(f / c) / w; return Math.exp(-x * x); };
+function modelSpectrum(F, out) {
+  const lh = F.leadNote > 0 ? mtof(F.leadNote) : 440, rz = 300 * Math.pow(2, 5 * F.secProg);
+  for (let i = 0; i < NB; i++) {
+    const f = BINF[i];
+    let v = 0.03 + 0.02 * Math.random();
+    v += 0.9 * F.kick * (g(f, 55, 0.5) + 0.5 * g(f, 110, 0.6));
+    v += F.sub * (g(f, F.subHz, 0.25) + 0.3 * g(f, F.subHz * 2, 0.3));
+    v += F.snare * (0.5 * g(f, 200, 0.4) + 0.7 * g(f, 2500, 1.3));
+    v += F.hat * g(f, 10000, 0.7) + F.crash * 0.7 * g(f, 8000, 1.2);
+    for (let k = 1; k <= 6; k++) v += F.lead * g(f, lh * k, 0.08) * 0.8 * Math.pow(0.55 + 0.4 * F.tone, k - 1);
+    v += F.pad * 0.35 * (g(f, 220, 0.6) + g(f, 440, 0.7) + g(f, 880, 0.6));
+    v += F.riser * 0.8 * g(f, rz, 0.5);
+    out[i] = clamp(v);
+  }
+  return out;
+}
+
+/* ---------- The live detector: what Magic's Globals would compute ---------- */
+function newDetector() {
+  return {
+    efast: 0, eslow: 0, kprev: 0, sprev: 0, cprev: 0, hprev: 0,
+    lastOnset: -9, onsets: [], iois: [], bpm: 120, phase: -0.3, lock: 0, lastErr: 0,
+    downSlot: 2, downFromDrop: false,
+    bar: -1, subAcc: 0, subN: 0, toneAcc: 0, toneN: 0, kicksBar: 0, snaresBar: 0, crashBar: 0, quickDone: false,
+    toneBars: [], subBars: [], snaresLast: 0, subOut: 0,
+    state: "intro", stateBar: 0, dropBar: -99, events: [],
+    counts: { kick: 0, snare: 0, hat: 0 },
+    pcHist: new Array(12).fill(0), trail: [], river: [], riverT: -1,
+    hatHits: [], kickHits: [], snareHits: []
+  };
+}
+let D = newDetector();
+
+function addEvent(kind, bar, t, detail) { D.events.push({ kind, bar, t, detail }); }
+
+function setState(s, bar, t, detail) {
+  if (D.state === s) return;
+  D.state = s; D.stateBar = bar;
+  if (s === "buildup" || s === "breakdown") addEvent(s, bar, t, detail);
+}
+
+const FOLD_LO = 90, FOLD_HI = 180;                 // one octave of tempo: the set's own range picks it
+const fold = b => { while (b < FOLD_LO) b *= 2; while (b >= FOLD_HI) b /= 2; return b; };
+function onKick(t) {
+  if (t - D.lastOnset < 0.15) return;
+  const ioi = t - D.lastOnset;
+  if (ioi < 2) { D.iois.push(ioi); if (D.iois.length > 48) D.iois.shift(); }
+  D.lastOnset = t; D.onsets.push(t); if (D.onsets.length > 24) D.onsets.shift();
+  const e = Math.round(D.phase) - D.phase;
+  D.phase += 0.4 * e; D.lastErr = e;
+  D.lock = D.lock * 0.75 + 0.25 * (1 - Math.min(1, Math.abs(e) * 5));
+  if (D.iois.length >= 3) {
+    const folded = D.iois.slice(-24).map(i => fold(60 / i)).sort((a, b) => a - b);
+    // mean of the values near the median: frame-quantized intervals scatter both ways around the true beat
+    const med = folded[Math.floor(folded.length / 2)], near = folded.filter(b => Math.abs(b - med) < med * 0.05);
+    const target = near.reduce((a, b) => a + b, 0) / near.length;
+    D.bpm += (target - D.bpm) * 0.2;
+  }
+  D.kicksBar++; D.counts.kick++; D.kickHits.push(t);
+}
+
+function closeBar(F, t) {
+  const b = D.bar;
+  const subAvg = D.subN ? D.subAcc / D.subN : 0, toneAvg = D.toneN ? D.toneAcc / D.toneN : 0;
+  const n = D.toneBars.length, toneRise = n >= 4 ? toneAvg - D.toneBars[n - 4] : 0;
+  D.toneBars.push(toneAvg); D.subBars.push(subAvg); D.snaresLast = D.snaresBar;
+  const low = subAvg < 0.3;
+  if (!D.hitThisBar) {
+    if (D.state === "intro" && D.kicksBar >= 3) { D.state = "groove"; D.stateBar = b; addEvent("entry", b, t - BAR, "Beat enters, but no bass step: not a drop"); }
+    else if (D.state === "drop" && low) setState(D.kicksBar > 0 ? "groove" : "breakdown", b, t, "Kick gone, sub-bass gone");
+    else if (low && D.state !== "intro" && (toneRise > 0.1 || D.snaresBar >= 6)) setState("buildup", b, t, toneRise > 0.1 ? `Brighter by ${toneRise.toFixed(2)} in 4 bars, sub-bass out` : `Snare roll: ${D.snaresBar} hits in a bar, sub-bass out`);
+    else if (low && D.kicksBar === 0 && D.state !== "intro" && D.state !== "buildup") setState("breakdown", b, t, "No kick, no sub-bass, the mids carry on");
+  }
+  D.subOut = low ? D.subOut + 1 : 0;
+}
+
+function updateDetector(F, dt) {
+  const t = F.t;
+  D.efast += (F.loud - D.efast) * (1 - Math.exp(-dt / 0.08));
+  D.eslow += (F.loud - D.eslow) * (1 - Math.exp(-dt / 2.5));
+  // kick onsets (snare-roll leakage in buildups makes false kicks, as a real band detector would)
+  const ks = F.kick + (F.L === "buildup" && F.rollDiv >= 4 ? 0.9 * F.snare : 0);
+  if (ks > 0.6 && D.kprev <= 0.6) onKick(t);
+  D.kprev = ks;
+  if (F.snare > 0.3 && D.sprev <= 0.3) { D.snaresBar++; D.counts.snare++; D.snareHits.push(t); }
+  D.sprev = F.snare;
+  if (F.hat > 0.3 && D.hprev <= 0.3) { D.counts.hat++; D.hatHits.push(t); }
+  D.hprev = F.hat;
+  // free-running beat clock
+  D.phase += dt * D.bpm / 60;
+  if (t - D.lastOnset > 2 * 60 / D.bpm) D.lock *= Math.exp(-dt / 1.2);
+  // bars
+  if (F.bar !== D.bar) {
+    if (D.bar >= 0) closeBar(F, t);
+    D.bar = F.bar; D.subAcc = D.subN = D.toneAcc = D.toneN = D.kicksBar = D.snaresBar = D.crashBar = 0; D.quickDone = D.hitThisBar = false;
+  }
+  D.subAcc += F.sub; D.subN++; D.toneAcc += F.tone; D.toneN++; D.crashBar = Math.max(D.crashBar, F.crash);
+  // quick check one beat into the bar: drop or lift
+  const frac = F.barF - F.bar;
+  if (!D.quickDone && frac >= 0.25) {
+    D.quickDone = true;
+    const subSoFar = D.subAcc / D.subN;
+    if (subSoFar > 0.55 && D.subOut >= 2 && D.state !== "drop") {
+      const before = D.subBars.length ? D.subBars[D.subBars.length - 1] : 0;
+      addEvent("drop", F.bar, t - SPB, `Sub-bass ${before.toFixed(2)} → ${subSoFar.toFixed(2)} after ${D.subOut} low bars`);
+      D.state = "drop"; D.stateBar = F.bar; D.dropBar = F.bar; D.hitThisBar = true;
+      D.downSlot = mod(Math.round(D.phase) - 1, 4); D.downFromDrop = true;
+    } else if (D.state === "drop" && D.crashBar > 0.5 && F.bar - D.dropBar >= 4) {
+      addEvent("lift", F.bar, t - SPB, `Second hit ${F.bar - D.dropBar} bars in: same drop`);
+      D.hitThisBar = true;
+    }
+  }
+  // pitch: trail and pitch-class histogram
+  for (let i = 0; i < 12; i++) D.pcHist[i] *= Math.exp(-dt / 10);
+  if (F.pitchConf > 0.15 && F.loud > 0.1 && F.pitchHz > 0) {
+    const m = ftom(F.pitchHz), pc = mod(m, 12);
+    D.pcHist[mod(Math.round(m), 12)] += F.pitchConf * dt;
+    D.trail.push({ m, pc, conf: F.pitchConf, t });
+  }
+  while (D.trail.length && t - D.trail[0].t > 2.5) D.trail.shift();
+  for (const arr of [D.hatHits, D.kickHits, D.snareHits]) while (arr.length && t - arr[0] > 3) arr.shift();
+  // river samples
+  if (t - D.riverT >= 0.2) { D.riverT = t; D.river.push({ t, e: D.eslow, f: D.efast, s: D.state, sub: F.sub }); }
+}
+
+/* ---------- Transport ---------- */
+const S = { t: 0, playing: true, sound: false, lastFrame: 0, spec: new Float32Array(NB), rows: [], rowT: -1 };
+const START_T = (22 * BAR) + 0.01;          // a few bars before the first drop
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function warmTo(target) {
+  D = newDetector(); S.rows = []; S.rowT = -1;
+  const dt = 1 / 60;
+  for (let t = 0; t < target; t += dt) {
+    const F = features(t);
+    updateDetector(F, dt);
+    if (t > target - 4 && t - S.rowT >= 0.06) { S.rowT = t; S.rows.push(Float32Array.from(modelSpectrum(F, new Float32Array(NB)))); if (S.rows.length > 44) S.rows.shift(); }
+  }
+  S.t = target;
+}
+
+/* ---------- Sound: a small synth playing the same track ---------- */
+const A = { ctx: null, master: null, analyser: null, noise: null, t0: 0, step: 0, data: null };
+function initAudio() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+  const master = ctx.createGain(); master.gain.value = 0.55;
+  const analyser = ctx.createAnalyser(); analyser.fftSize = 4096; analyser.smoothingTimeConstant = 0.6;
+  master.connect(comp); comp.connect(analyser); analyser.connect(ctx.destination);
+  const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  Object.assign(A, { ctx, master, analyser, noise: buf, data: new Uint8Array(analyser.frequencyBinCount) });
+}
+function env(gain, time, peak, attack, decay) {
+  gain.gain.setValueAtTime(0.0001, time);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), time + attack);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + attack + decay);
+}
+function vKick(t, amp) {
+  const o = A.ctx.createOscillator(), gn = A.ctx.createGain();
+  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+  env(gn, t, amp, 0.003, 0.35); o.connect(gn); gn.connect(A.master); o.start(t); o.stop(t + 0.4);
+}
+function vNoise(t, amp, type, freq, q, decay) {
+  const s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), gn = A.ctx.createGain();
+  s.buffer = A.noise; f.type = type; f.frequency.value = freq; f.Q.value = q;
+  env(gn, t, amp, 0.002, decay); s.connect(f); f.connect(gn); gn.connect(A.master);
+  s.start(t, Math.random()); s.stop(t + decay + 0.05);
+}
+function vSnare(t, amp) {
+  vNoise(t, amp * 0.5, "bandpass", 1800, 0.8, 0.14);
+  const o = A.ctx.createOscillator(), gn = A.ctx.createGain(); o.frequency.value = 200; o.type = "triangle";
+  env(gn, t, amp * 0.25, 0.002, 0.08); o.connect(gn); gn.connect(A.master); o.start(t); o.stop(t + 0.12);
+}
+function vTone(t, freq, dur, amp, type, cutoff) {
+  const o = A.ctx.createOscillator(), gn = A.ctx.createGain(); o.type = type; o.frequency.value = freq;
+  let node = o;
+  if (cutoff) { const f = A.ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = cutoff; f.Q.value = 2; o.connect(f); node = f; }
+  gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(amp, t + 0.01);
+  gn.gain.setValueAtTime(amp, t + dur * 0.7); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  node.connect(gn); gn.connect(A.master); o.start(t); o.stop(t + dur + 0.02);
+}
+function vPad(t, notes, dur, amp) {
+  notes.forEach(m => [-6, 6].forEach(cents => {
+    const o = A.ctx.createOscillator(), gn = A.ctx.createGain(); o.type = "triangle"; o.frequency.value = mtof(m); o.detune.value = cents;
+    gn.gain.setValueAtTime(0.0001, t); gn.gain.linearRampToValueAtTime(amp, t + dur * 0.3); gn.gain.linearRampToValueAtTime(0.0001, t + dur);
+    o.connect(gn); gn.connect(A.master); o.start(t); o.stop(t + dur + 0.02);
+  }));
+}
+function vRiser(t, dur, f0, f1, a0, a1) {
+  const s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), gn = A.ctx.createGain();
+  s.buffer = A.noise; s.loop = true; f.type = "bandpass"; f.Q.value = 3;
+  f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  gn.gain.setValueAtTime(a0, t); gn.gain.linearRampToValueAtTime(a1, t + dur);
+  s.connect(f); f.connect(gn); gn.connect(A.master); s.start(t); s.stop(t + dur);
+}
+function scheduleStep(n, time) {
+  const s = n % 4, beat = Math.floor(n / 4), bar = Math.floor(n / 16);
+  const sec = sectionAt(bar), secBar = bar - sec.start, L = sec.label, bib = beat % 4;
+  if (kickOn(sec, secBar) && s === 0) vKick(time, 0.9);
+  if (hatsOn(sec)) { if (s === 2) vNoise(time, L === "drop" ? 0.22 : 0.15, "highpass", 7000, 0.7, 0.05); else if (L === "drop" && s !== 0) vNoise(time, 0.06, "highpass", 8000, 0.7, 0.03); }
+  if (L === "drop" && s === 0 && (bib === 1 || bib === 3)) vSnare(time, 0.8);
+  if (L === "buildup") {
+    const div = ROLL[Math.min(7, secBar)], amp = 0.3 + 0.5 * secBar / 8;
+    if (div === 1 && s === 0) vSnare(time, amp);
+    if (div === 2 && s % 2 === 0) vSnare(time, amp);
+    if (div === 4) vSnare(time, amp);
+    if (div === 8) { vSnare(time, amp); vSnare(time + STEP / 2, amp * 0.8); }
+  }
+  const root = ROOTS[bar % 4], subHz = mtof(root);
+  if (L === "drop") { if (s === 0) vTone(time, subHz, STEP * 1.6, 0.12, "sine"); if (s === 2) vTone(time, subHz, STEP * 1.8, 0.45, "sine"); }
+  if (L === "intro" && secBar >= 8 && s === 0) vTone(time, subHz, SPB * 0.9, 0.16, "sine");
+  if (L === "outro" && s === 0) vTone(time, subHz, SPB * 0.9, 0.16 * (1 - secBar / 8) + 0.01, "sine");
+  if (L === "breakdown" && n % 16 === 0) vTone(time, subHz, BAR * 0.95, 0.1, "sine");
+  if ((L === "breakdown" || L === "drop") && s % 2 === 0) {
+    const slot = (bar % 4) * 8 + bib * 2 + s / 2, m = MEL[slot];
+    if (m > 0) vTone(time, mtof(m), SPB / 2 * 0.95, L === "breakdown" ? 0.09 : 0.06, "sawtooth", L === "breakdown" ? 1400 : 3200);
+  }
+  if (n % 16 === 0) {
+    if (L === "breakdown" || L === "buildup" || L === "drop") vPad(time, CHORDS[bar % 4], BAR, L === "breakdown" ? 0.035 : 0.02);
+    if (L === "buildup") vRiser(time, BAR, 300 * Math.pow(2, 5 * secBar / 8), 300 * Math.pow(2, 5 * (secBar + 1) / 8), 0.02 + 0.12 * secBar / 8, 0.02 + 0.12 * (secBar + 1) / 8);
+    if (L === "drop" && (secBar === 0 || secBar === 8)) vNoise(time, 0.3, "highpass", 5000, 0.5, 1.6);
+  }
+}
+const TOTAL_STEPS = TOTAL_BARS * 16;
+function audioResync() { if (!A.ctx) return; A.t0 = A.ctx.currentTime + 0.06 - S.t; A.step = Math.ceil(S.t / STEP); }
+function audioPump() {
+  if (!A.ctx || !S.sound || !S.playing) return;
+  const horizon = A.ctx.currentTime + 0.15;
+  while (A.t0 + A.step * STEP < horizon) {
+    const n = A.step;
+    if (n >= TOTAL_STEPS) break;               // the loop restart resyncs
+    scheduleStep(n, Math.max(A.ctx.currentTime, A.t0 + n * STEP));
+    A.step++;
+  }
+}
+setInterval(audioPump, 25);
+function audioSpectrum(out) {
+  A.analyser.getByteFrequencyData(A.data);
+  const hzPerBin = A.ctx.sampleRate / A.analyser.fftSize;
+  for (let i = 0; i < NB; i++) {
+    const idx = Math.min(A.data.length - 1, Math.round(BINF[i] / hzPerBin));
+    out[i] = clamp((A.data[idx] / 255 - 0.3) / 0.7);
+  }
+}
+
+/* ---------- Canvas plumbing ---------- */
+const views = [];
+document.querySelectorAll("canvas[data-draw]").forEach(cv => {
+  const v = { cv, ctx: cv.getContext("2d"), kind: cv.dataset.draw, w: 0, h: 0, visible: true, parts: [] };
+  const fit = () => { const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); v.w = r.width; v.h = r.height; cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); v.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  new ResizeObserver(fit).observe(cv); fit();
+  new IntersectionObserver(es => es.forEach(e => v.visible = e.isIntersecting)).observe(cv);
+  views.push(v);
+});
+const map = { cv: document.getElementById("songmap") };
+map.ctx = map.cv.getContext("2d");
+const fitMap = () => { const r = map.cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); map.w = r.width; map.h = r.height; map.cv.width = Math.round(r.width * dpr); map.cv.height = Math.round(r.height * dpr); map.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+new ResizeObserver(fitMap).observe(map.cv); fitMap();
+
+function text(ctx, s, x, y, { size = 12, color = C.fg, font = FONT_MONO, align = "left", base = "alphabetic", weight = 400 } = {}) {
+  ctx.font = `${weight} ${size}px ${font}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(s, x, y);
+}
+function glow(ctx, x, y, r, color, a) {
+  const gr = ctx.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, rgba(color, a)); gr.addColorStop(1, rgba(color, 0));
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+}
+const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+/* ---------- A: Beat Orbit ---------- */
+function drawOrbit(v, F) {
+  const { ctx, w, h } = v, cx = w / 2, cy = h * 0.5, R = Math.min(w, h) * 0.33;
+  glow(ctx, cx, cy, R * 1.9, stateColor(D.state), 0.08 + 0.25 * D.efast);
+  const barPhase = mod(D.phase - D.downSlot, 4) / 4, beatInBar = Math.floor(barPhase * 4);
+  const free = D.lock < 0.45;
+  // orbit
+  ctx.lineWidth = 2; ctx.strokeStyle = rgba(C.fg, free ? 0.35 : 0.22);
+  ctx.setLineDash(free ? [5, 7] : []); ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  // trail
+  const a0 = -Math.PI / 2, a1 = a0 + barPhase * TAU;
+  ctx.lineWidth = 5; ctx.lineCap = "round"; ctx.strokeStyle = rgba(C.kick, 0.55); ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1); ctx.stroke();
+  // beat markers
+  for (let i = 0; i < 4; i++) {
+    const a = a0 + i * TAU / 4, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R, big = i === 0;
+    ctx.fillStyle = i <= beatInBar ? (big ? C.accent : C.fg) : C.bg;
+    ctx.strokeStyle = big ? C.accent : C.muted; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, big ? 10 : 6, 0, TAU); ctx.fill(); ctx.stroke();
+    text(ctx, String(i + 1), cx + Math.cos(a) * (R - 26), cy + Math.sin(a) * (R - 26), { size: 11, color: C.muted, align: "center", base: "middle" });
+  }
+  // planet
+  const px = cx + Math.cos(a1) * R, py = cy + Math.sin(a1) * R;
+  glow(ctx, px, py, 26, C.kick, 0.6); ctx.fillStyle = C.fg; ctx.beginPath(); ctx.arc(px, py, 7, 0, TAU); ctx.fill();
+  // sun = kick
+  const sr = R * 0.2 * (1 + 0.45 * F.kick);
+  glow(ctx, cx, cy, sr * 2.6, C.kick, 0.25 + 0.5 * F.kick);
+  ctx.fillStyle = rgba(C.kick, 0.9); ctx.beginPath(); ctx.arc(cx, cy, sr, 0, TAU); ctx.fill();
+  text(ctx, "kick", cx, cy + 4, { size: 11, color: C.bg, align: "center", weight: 500 });
+  // outer ring: bars since drop
+  const since = D.dropBar >= 0 ? F.bar - D.dropBar : -1, R2 = R * 1.22;
+  for (let i = 0; i < 16; i++) {
+    const a = a0 + (i + 0.5) * TAU / 16, on = since >= 0 && i <= mod(since, 16);
+    ctx.strokeStyle = on ? stateColor("drop") : rgba(C.fg, 0.14); ctx.lineWidth = on ? 4 : 3;
+    ctx.beginPath(); ctx.arc(cx, cy, R2, a - 0.13, a + 0.13); ctx.stroke();
+  }
+  // hat sparks on the outer edge
+  for (const th of D.hatHits) {
+    const age = F.t - th; if (age > 0.6 || age < 0) continue;
+    const a = hash(th * 7.1) * TAU, rr = R2 + 10 + age * 40;
+    ctx.fillStyle = rgba(C.hats, 1 - age / 0.6); ctx.beginPath(); ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2.2, 0, TAU); ctx.fill();
+  }
+  // readouts
+  const pad = 14;
+  text(ctx, `${D.bpm.toFixed(1)} BPM`, pad, pad + 14, { size: 16, weight: 500 });
+  text(ctx, free ? "free-running" : `locked ${Math.round(D.lock * 100)} %`, pad, pad + 32, { size: 12, color: free ? C["s-buildup"] : C.presence });
+  text(ctx, `beat ${beatInBar + 1} of 4`, w - pad, pad + 14, { size: 14, align: "right" });
+  text(ctx, D.downFromDrop ? "bar 1 set by the drop" : "bar 1 is a guess", w - pad, pad + 32, { size: 12, align: "right", color: D.downFromDrop ? C.presence : C.muted });
+  text(ctx, since >= 0 ? `bars since drop: ${since}` : "no drop yet", pad, h - pad, { size: 12, color: C.muted });
+  text(ctx, `nudge ${(D.lastErr * 60000 / D.bpm).toFixed(0)} ms`, w - pad, h - pad, { size: 12, color: C.muted, align: "right" });
+}
+
+/* ---------- B: Spectral Terrain ---------- */
+const BANDS = [["SUB", 30, 80, "sub"], ["BASS", 80, 320, "kick"], ["MIDS", 320, 1200, "snare"], ["PRESENCE", 1200, 5000, "presence"], ["AIR", 5000, 16000, "hats"]];
+const fx = (f, x0, x1) => x0 + (x1 - x0) * Math.log(f / FMIN) / Math.log(FMAX / FMIN);
+function drawTerrain(v, F) {
+  const { ctx, w, h } = v, rows = S.rows, n = rows.length;
+  const front = h * 0.78, back = h * 0.2;
+  const gr = ctx.createLinearGradient(w * 0.06, 0, w * 0.94, 0);
+  BANDS.forEach(([, lo, hi, col], i) => gr.addColorStop(i / (BANDS.length - 1), C[col]));
+  for (let j = 0; j < n; j++) {
+    const d = (n - 1 - j) / Math.max(1, n - 1), y0 = lerp(front, back, d);
+    const x0 = lerp(w * 0.06, w * 0.24, d), x1 = lerp(w * 0.94, w * 0.76, d), amp = lerp(h * 0.34, h * 0.08, d);
+    const row = rows[j];
+    ctx.beginPath(); ctx.moveTo(x0, y0);
+    for (let i = 0; i < NB; i++) ctx.lineTo(lerp(x0, x1, i / (NB - 1)), y0 - row[i] * amp);
+    ctx.lineTo(x1, y0); ctx.closePath();
+    ctx.fillStyle = C.bg; ctx.fill();
+    ctx.globalAlpha = lerp(1, 0.12, Math.pow(d, 0.8)); ctx.strokeStyle = gr; ctx.lineWidth = j === n - 1 ? 2.2 : 1.2; ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  // band labels on the front edge
+  const x0 = w * 0.06, x1 = w * 0.94, yl = front + 22;
+  BANDS.forEach(([name, lo, hi, col]) => {
+    const a = fx(lo, x0, x1), b = fx(hi, x0, x1);
+    ctx.fillStyle = rgba(C[col], 0.85); ctx.fillRect(a + 1, front + 8, b - a - 2, 3);
+    text(ctx, name, (a + b) / 2, yl + 6, { size: 10.5, color: C[col], align: "center" });
+    text(ctx, lo >= 1000 ? `${lo / 1000}k` : String(lo), a, yl + 22, { size: 9.5, color: C.muted, align: "center" });
+  });
+  text(ctx, "16k Hz", x1, yl + 22, { size: 9.5, color: C.muted, align: "right" });
+  // instrument tags over their hills
+  const front0 = rows[n - 1]; if (!front0) return;
+  const tag = (label, f, val, col) => {
+    if (val < 0.45) return;
+    const i = Math.round(Math.log(f / FMIN) / Math.log(FMAX / FMIN) * (NB - 1));
+    const x = lerp(x0, x1, i / (NB - 1)), y = front - front0[clamp(i, 0, NB - 1)] * h * 0.34 - 12;
+    ctx.globalAlpha = clamp((val - 0.45) * 3); text(ctx, label, x, y, { size: 11, color: C[col], align: "center", weight: 500 }); ctx.globalAlpha = 1;
+  };
+  tag("kick", 60, F.kick, "kick"); tag("sub-bass", F.subHz, F.sub, "sub"); tag("snare", 2500, F.snare, "snare");
+  tag("hats", 10000, Math.max(F.hat, F.crash), "hats"); tag("lead", F.leadNote > 0 ? mtof(F.leadNote) : 440, F.lead * 1.2, "lead"); tag("riser", 300 * Math.pow(2, 5 * F.secProg), F.riser * 1.4, "presence");
+  text(ctx, S.sound ? "live from the synth" : "model spectrum (sound off)", 14, 22, { size: 11, color: C.muted });
+}
+
+/* ---------- C: Song River ---------- */
+const PIN = { drop: "DROP", lift: "lift", buildup: "buildup", breakdown: "breakdown", entry: "beat in" };
+function drawRiver(v, F) {
+  const { ctx, w, h } = v, pl = 16, pr = 16, X = t => pl + (w - pl - pr) * t / SONG_LEN;
+  const stripY = 30, stripH = 8, cy = h * 0.5, maxHW = h * 0.2, subY = h * 0.84, subH = h * 0.1;
+  // real structure strip
+  text(ctx, "real structure (not known live)", pl, stripY - 8, { size: 10.5, color: C.muted });
+  SECS.forEach(s => {
+    const a = X(s.start * BAR), b = X((s.start + s.bars) * BAR), past = Math.min(b, X(F.t));
+    ctx.fillStyle = rgba(stateColor(s.label), 0.25); ctx.fillRect(a, stripY, b - a - 1, stripH);
+    if (past > a) { ctx.fillStyle = stateColor(s.label); ctx.fillRect(a, stripY, past - a - 1, stripH); }
+  });
+  // river
+  const R = D.river;
+  for (let i = 0; i < R.length; i++) {
+    const p = R[i], x = X(p.t), wdt = Math.max(1.5, X(0.2) - X(0) + 0.6), hw = 3 + p.e * maxHW * 1.6;
+    ctx.fillStyle = rgba(stateColor(p.s), 0.85); ctx.fillRect(x, cy - hw, wdt, hw * 2);
+    const hf = 3 + p.f * maxHW * 1.6; ctx.fillStyle = rgba(C.fg, 0.10); ctx.fillRect(x, cy - hf, wdt, hf * 2);
+  }
+  // sub-bass lane
+  text(ctx, "sub-bass", pl, subY - subH - 6, { size: 10.5, color: C.sub });
+  ctx.strokeStyle = C.sub; ctx.lineWidth = 1.5; ctx.beginPath();
+  R.forEach((p, i) => { const x = X(p.t), y = subY - p.sub * subH; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+  ctx.strokeStyle = rgba(C.fg, 0.12); ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(pl, subY - 0.3 * subH); ctx.lineTo(w - pr, subY - 0.3 * subH); ctx.stroke(); ctx.setLineDash([]);
+  text(ctx, "0.3", w - pr, subY - 0.3 * subH - 3, { size: 9, color: C.muted, align: "right" });
+  // pins
+  const rowsUsed = [];
+  D.events.forEach(e => {
+    const x = X(e.t), major = e.kind === "drop";
+    const col = e.kind === "lift" ? C.fg : e.kind === "entry" ? C["s-groove"] : stateColor(e.kind);
+    let row = 0; while (rowsUsed.some(r => r.row === row && Math.abs(r.x - x) < 70)) row++;
+    rowsUsed.push({ row, x });
+    const ly = stripY + stripH + 16 + row * 13;
+    ctx.strokeStyle = rgba(col, 0.7); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, ly + 3); ctx.lineTo(x, cy); ctx.stroke();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, cy, major ? 4.5 : 3, 0, TAU); ctx.fill();
+    text(ctx, PIN[e.kind], x + 4, ly, { size: major ? 11 : 10, color: col, weight: major ? 500 : 400 });
+  });
+  // now line
+  const nx = X(F.t); ctx.strokeStyle = C.fg; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(nx, stripY - 2); ctx.lineTo(nx, h - 8); ctx.stroke();
+  // latest reason
+  const last = D.events[D.events.length - 1];
+  if (last) {
+    const s = `${PIN[last.kind]} at bar ${last.bar + 1}: ${last.detail}`;
+    text(ctx, s, w - pr, stripY - 8, { size: 11, color: C.fg, align: "right" });
+  }
+  // legend
+  let lx = pl; const ly = h - 6;
+  ["intro", "groove", "buildup", "drop", "breakdown"].forEach(k => {
+    ctx.fillStyle = stateColor(k); ctx.fillRect(lx, ly - 8, 9, 9); text(ctx, k, lx + 13, ly, { size: 10, color: C.muted });
+    ctx.font = `400 10px ${FONT_MONO}`; lx += 13 + ctx.measureText(k).width + 14;
+  });
+}
+
+/* ---------- D: Drop Radar ---------- */
+function drawRadar(v, F) {
+  const { ctx, w, h } = v, narrow = w < 460;
+  const subSoFar = D.subN ? D.subAcc / D.subN : 0;
+  const lowBars = D.subOut + (subSoFar < 0.3 ? (F.barF - F.bar) : 0);
+  const n = D.toneBars.length, toneNow = D.toneN ? D.toneAcc / D.toneN : 0, rise = n >= 4 ? toneNow - D.toneBars[n - 4] : 0;
+  const snares = Math.max(D.snaresLast, D.snaresBar);
+  const cues = [
+    { label: "sub-bass out", val: clamp(lowBars / 4), txt: `${lowBars.toFixed(1)} bars`, ok: lowBars >= 2, col: C.sub },
+    { label: "getting brighter", val: clamp(rise / 0.4), txt: `${rise >= 0 ? "+" : ""}${rise.toFixed(2)} / 4 bars`, ok: rise > 0.1, col: C.presence },
+    { label: "snare roll", val: clamp(snares / 32), txt: snares <= 1 ? "none" : snares <= 4 ? "quarters" : snares <= 8 ? "8ths" : snares <= 16 ? "16ths" : "32nds", ok: snares >= 6, col: C.snare }
+  ];
+  const lastDrop = [...D.events].reverse().find(e => e.kind === "drop" || e.kind === "lift");
+  const sinceHit = lastDrop ? F.t - lastDrop.t : 99;
+  let tension = 0;
+  if (D.state === "buildup" || D.state === "breakdown") tension = 0.1 + 0.3 * cues[0].val + 0.3 * cues[1].val + 0.3 * cues[2].val;
+  if (D.state === "breakdown") tension *= 0.6;
+  if (D.state === "drop") tension = Math.max(0.15, 1 - sinceHit / 6);
+  // gauge
+  const gx = narrow ? w / 2 : w * 0.3, gy = narrow ? h * 0.48 : h * 0.62, gr = Math.min(narrow ? w * 0.36 : w * 0.24, h * 0.42);
+  const grad = ctx.createLinearGradient(gx - gr, 0, gx + gr, 0);
+  grad.addColorStop(0, C["s-breakdown"]); grad.addColorStop(0.6, C["s-buildup"]); grad.addColorStop(1, C["s-drop"]);
+  ctx.lineCap = "round"; ctx.lineWidth = 14; ctx.strokeStyle = rgba(C.fg, 0.08); ctx.beginPath(); ctx.arc(gx, gy, gr, Math.PI, TAU); ctx.stroke();
+  ctx.strokeStyle = grad; ctx.beginPath(); ctx.arc(gx, gy, gr, Math.PI, Math.PI + Math.PI * tension); ctx.stroke();
+  for (let i = 0; i <= 10; i++) { const a = Math.PI + Math.PI * i / 10; ctx.strokeStyle = rgba(C.fg, 0.25); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(gx + Math.cos(a) * (gr - 16), gy + Math.sin(a) * (gr - 16)); ctx.lineTo(gx + Math.cos(a) * (gr - 22), gy + Math.sin(a) * (gr - 22)); ctx.stroke(); }
+  const na = Math.PI + Math.PI * tension;
+  ctx.strokeStyle = C.fg; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(na) * (gr - 26), gy + Math.sin(na) * (gr - 26)); ctx.stroke();
+  ctx.fillStyle = C.fg; ctx.beginPath(); ctx.arc(gx, gy, 5, 0, TAU); ctx.fill();
+  const barsIn = F.bar - D.stateBar + 1;
+  const title = { buildup: `BUILDUP · ${barsIn} bars`, drop: "DROP", breakdown: `BREAKDOWN · ${barsIn} bars`, groove: "GROOVE", intro: "INTRO" }[D.state];
+  text(ctx, title, gx, gy + 30, { size: 15, color: stateColor(D.state), align: "center", font: FONT_DISP, weight: 500 });
+  const sub = { buildup: "the drop can come any bar now", drop: D.events.length && sinceHit < 4 ? (lastDrop.kind === "lift" ? "second hit, same drop" : "sub-bass back on the bar line") : "riding the drop", breakdown: "waiting for a riser", groove: "steady beat, no tension", intro: "listening" }[D.state];
+  text(ctx, sub, gx, gy + 48, { size: 11.5, color: C.muted, align: "center" });
+  // shockwave on drop or lift
+  if (sinceHit < 1.4) {
+    const k = sinceHit / 1.4, col = lastDrop.kind === "lift" ? C.fg : C.accent;
+    ctx.strokeStyle = rgba(col, 1 - k); ctx.lineWidth = 6 * (1 - k) + 1; ctx.beginPath(); ctx.arc(gx, gy - gr * 0.3, gr * (0.3 + 1.6 * k), 0, TAU); ctx.stroke();
+    glow(ctx, gx, gy - gr * 0.3, gr * 1.4, col, 0.35 * (1 - k));
+  }
+  // cue rows
+  const cx0 = narrow ? 18 : w * 0.58, cw = narrow ? w - 36 : w * 0.38, cy0 = narrow ? h * 0.72 : h * 0.24, gap = narrow ? 24 : 54;
+  cues.forEach((c, i) => {
+    const y = cy0 + i * gap;
+    text(ctx, (c.ok ? "✓ " : "· ") + c.label, cx0, y, { size: narrow ? 11 : 12.5, color: c.ok ? C.fg : C.muted, font: FONT_BODY, weight: c.ok ? 600 : 400 });
+    text(ctx, c.txt, cx0 + cw, y, { size: 11, color: C.muted, align: "right" });
+    ctx.fillStyle = rgba(C.fg, 0.08); ctx.fillRect(cx0, y + 6, cw, 6);
+    ctx.fillStyle = c.col; ctx.fillRect(cx0, y + 6, cw * c.val, 6);
+  });
+}
+
+/* ---------- E: Who's Playing ---------- */
+function drawAnatomy(v, F) {
+  const { ctx, w, h } = v;
+  // hats: sparks overhead
+  const hy = h * 0.16;
+  text(ctx, "hats  6–16 kHz", 14, 22, { size: 11, color: C.hats });
+  for (const th of D.hatHits) {
+    const age = F.t - th; if (age < 0 || age > 0.9) continue;
+    for (let k = 0; k < 5; k++) {
+      const x = w * (0.1 + 0.8 * hash(th * 3.3 + k)), y = hy + (hash(th + k * 1.7) - 0.5) * h * 0.1 - age * 18;
+      ctx.fillStyle = rgba(C.hats, (1 - age / 0.9) * 0.9); ctx.beginPath(); ctx.arc(x, y, 1.5 + 1.5 * hash(k + th), 0, TAU); ctx.fill();
+    }
+  }
+  if (F.crash > 0.1) { ctx.fillStyle = rgba(C.hats, F.crash * 0.25); ctx.fillRect(0, 0, w, h * 0.28); }
+  // kick: heart
+  const kx = w * 0.3, ky = h * 0.5, kr = Math.min(w, h) * 0.12;
+  for (const kt of D.kickHits) { const age = F.t - kt; if (age < 0 || age > 0.8) continue; ctx.strokeStyle = rgba(C.kick, 1 - age / 0.8); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(kx, ky, kr * (1 + age * 2.2), 0, TAU); ctx.stroke(); }
+  glow(ctx, kx, ky, kr * 2.4, C.kick, 0.15 + 0.45 * F.kick);
+  ctx.fillStyle = rgba(C.kick, 0.25 + 0.75 * F.kick); ctx.beginPath(); ctx.arc(kx, ky, kr * (0.75 + 0.45 * F.kick), 0, TAU); ctx.fill();
+  text(ctx, "kick  40–120 Hz", kx, ky + kr * 1.6 + 8, { size: 11, color: C.kick, align: "center" });
+  // snare: burst
+  const sx = w * 0.7, sy = h * 0.5, sr = Math.min(w, h) * 0.07;
+  for (let i = 0; i < 18; i++) {
+    const a = i * TAU / 18 + F.t * 0.2, l = sr + F.snare * sr * 2.4 * (0.6 + 0.4 * hash(i));
+    ctx.strokeStyle = rgba(C.snare, 0.25 + 0.75 * F.snare); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(sx + Math.cos(a) * sr * 0.6, sy + Math.sin(a) * sr * 0.6); ctx.lineTo(sx + Math.cos(a) * l, sy + Math.sin(a) * l); ctx.stroke();
+  }
+  text(ctx, "snare / clap  1.2–5 kHz", sx, ky + kr * 1.6 + 8, { size: 11, color: C.snare, align: "center" });
+  // sub-bass: floor wave
+  const fy = h * 0.86, amp = h * 0.07 * F.sub, wl = 60 + (F.subHz - 40) * 3;
+  ctx.strokeStyle = C.sub; ctx.lineWidth = 2.5; ctx.beginPath();
+  for (let x = 0; x <= w; x += 4) { const y = fy + Math.sin((x / wl) * TAU - F.t * F.subHz * 0.12) * amp; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.stroke(); ctx.fillStyle = rgba(C.sub, 0.12); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+  const root = NOTE_NAMES[mod(ROOTS[mod(F.bar, 4)], 12)];
+  text(ctx, `sub-bass  30–80 Hz  ·  ${root}  ${F.subHz.toFixed(0)} Hz`, 14, fy - h * 0.09 - 6, { size: 11, color: C.sub });
+  // counters
+  text(ctx, `kicks ${D.counts.kick}  ·  snares ${D.counts.snare}  ·  hats ${D.counts.hat}`, w - 14, 22, { size: 11, color: C.muted, align: "right" });
+}
+
+/* ---------- F: Note Wheel ---------- */
+const MAJOR = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88], MINOR = [6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+function keyGuess() {
+  const hsum = D.pcHist.reduce((a, b) => a + b, 0); if (hsum < 0.4) return null;
+  let best = null;
+  for (let r = 0; r < 12; r++) for (const [prof, name] of [[MAJOR, "major"], [MINOR, "minor"]]) {
+    let s = 0; for (let i = 0; i < 12; i++) s += D.pcHist[(i + r) % 12] * prof[i];
+    if (!best || s > best.s) best = { s, name: `${NOTE_NAMES[r]} ${name}` };
+  }
+  return best.name;
+}
+function drawNotes(v, F) {
+  const { ctx, w, h } = v, cx = w / 2, cy = h * 0.52, R = Math.min(w, h) * 0.36;
+  glow(ctx, cx, cy, R * (1.2 + 0.6 * F.tone), C.lead, 0.08 + 0.35 * F.tone * F.tone);
+  const max = Math.max(1e-3, ...D.pcHist);
+  for (let i = 0; i < 12; i++) {
+    const a0 = -Math.PI / 2 + (i - 0.5) * TAU / 12, a1 = a0 + TAU / 12, len = D.pcHist[i] / max;
+    ctx.fillStyle = rgba(C.lead, 0.08 + 0.4 * len); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R * (0.35 + 0.6 * len), a0 + 0.02, a1 - 0.02); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = rgba(C.fg, 0.1); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a0) * R, cy + Math.sin(a0) * R); ctx.stroke();
+    const am = a0 + TAU / 24, sharp = NOTE_NAMES[i].length > 1;
+    text(ctx, NOTE_NAMES[i], cx + Math.cos(am) * (R + 16), cy + Math.sin(am) * (R + 16), { size: sharp ? 10 : 12, color: sharp ? C.muted : C.fg, align: "center", base: "middle" });
+  }
+  ctx.strokeStyle = rgba(C.fg, 0.25); ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+  // trail
+  const tr = D.trail;
+  for (let i = 1; i < tr.length; i++) {
+    const p = tr[i], q = tr[i - 1], age = F.t - p.t;
+    const pos = o => { const a = -Math.PI / 2 + o.pc * TAU / 12, r = R * clamp(0.25 + (o.m - 28) / 60, 0.2, 1); return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; };
+    const [x1, y1] = pos(p), [x0, y0] = pos(q);
+    const jump = Math.hypot(x1 - x0, y1 - y0) > R * 0.5;
+    ctx.globalAlpha = clamp(1 - age / 2.5) * (0.3 + 0.7 * p.conf);
+    if (!jump) { ctx.strokeStyle = C.lead; ctx.lineWidth = 2 + 3 * p.conf; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); }
+    ctx.fillStyle = p.conf > 0.5 ? C.fg : C.snare; ctx.beginPath(); ctx.arc(x1, y1, 1.5 + 2 * p.conf, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // center readout
+  const cur = tr[tr.length - 1], fresh = cur && F.t - cur.t < 0.15;
+  if (fresh) {
+    const m = Math.round(cur.m), name = NOTE_NAMES[mod(m, 12)] + (Math.floor(m / 12) - 1);
+    text(ctx, name, cx, cy + 2, { size: 22, align: "center", base: "middle", font: FONT_DISP, weight: 500 });
+    text(ctx, `${mtof(cur.m).toFixed(0)} Hz`, cx, cy + 22, { size: 10.5, align: "center", color: C.muted });
+  } else text(ctx, "–", cx, cy, { size: 20, align: "center", base: "middle", color: C.muted });
+  const clear = fresh && cur.conf > 0.5;
+  text(ctx, fresh ? (clear ? "clear: one melody" : "unsure: full mix") : "no pitch", 14, 22, { size: 11.5, color: clear ? C.presence : C.snare });
+  const k = keyGuess();
+  text(ctx, k ? `key guess: ${k}` : "key guess: listening", w - 14, 22, { size: 11.5, align: "right" });
+  text(ctx, `brightness ${F.tone.toFixed(2)}`, w - 14, h - 12, { size: 11, align: "right", color: C.lead });
+}
+
+/* ---------- G: Tempo Lens ---------- */
+function drawTempo(v, F) {
+  const { ctx, w, h } = v, pl = 16, pr = 16, iw = w - pl - pr;
+  // onset strip: last 3 s
+  const sy = 40, win = 3;
+  text(ctx, "kick hits, last 3 s", pl, 22, { size: 11, color: C.muted });
+  ctx.strokeStyle = rgba(C.fg, 0.15); ctx.beginPath(); ctx.moveTo(pl, sy); ctx.lineTo(w - pr, sy); ctx.stroke();
+  const recent = D.onsets.filter(t => F.t - t < win);
+  recent.forEach((t, i) => {
+    const x = pl + iw * (1 - (F.t - t) / win);
+    ctx.strokeStyle = C.kick; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, sy - 9); ctx.lineTo(x, sy + 9); ctx.stroke();
+    if (i > 0) { const px = pl + iw * (1 - (F.t - recent[i - 1]) / win); if (x - px > 34) text(ctx, `${Math.round((t - recent[i - 1]) * 1000)}`, (x + px) / 2, sy + 22, { size: 9.5, color: C.muted, align: "center" }); }
+  });
+  // histogram of intervals
+  const hy0 = h * 0.38, hh = h * 0.24, lo = 0.15, hi = 1.1, nb = 38, bins = new Array(nb).fill(0);
+  D.iois.forEach(i => { const b = Math.floor((i - lo) / (hi - lo) * nb); if (b >= 0 && b < nb) bins[b]++; });
+  const bmax = Math.max(1, ...bins), bw = iw / nb;
+  let peak = 0; bins.forEach((c, i) => { if (c > bins[peak]) peak = i; });
+  bins.forEach((c, i) => { ctx.fillStyle = i === peak ? C.kick : rgba(C.fg, 0.35); const bh = hh * c / bmax; ctx.fillRect(pl + i * bw + 1, hy0 + hh - bh, bw - 2, bh); });
+  ctx.strokeStyle = rgba(C.fg, 0.2); ctx.beginPath(); ctx.moveTo(pl, hy0 + hh); ctx.lineTo(w - pr, hy0 + hh); ctx.stroke();
+  [0.25, 0.5, 0.75, 1].forEach(s => { const x = pl + iw * (s - lo) / (hi - lo); text(ctx, `${s * 1000} ms`, x, hy0 + hh + 14, { size: 9.5, color: C.muted, align: "center" }); });
+  text(ctx, "time between hits", pl, hy0 - 8, { size: 11, color: C.muted });
+  // fold onto the BPM axis
+  const ay = h * 0.86, bl = 50, bh = 270, BX = b => pl + iw * (b - bl) / (bh - bl);
+  ctx.fillStyle = rgba(C.presence, 0.14); ctx.fillRect(BX(FOLD_LO), ay - 22, BX(FOLD_HI) - BX(FOLD_LO), 30);
+  ctx.strokeStyle = rgba(C.fg, 0.25); ctx.beginPath(); ctx.moveTo(pl, ay + 8); ctx.lineTo(w - pr, ay + 8); ctx.stroke();
+  [60, 90, 120, 150, 180, 210, 240].forEach(b => text(ctx, String(b), BX(b), ay + 22, { size: 9.5, color: C.muted, align: "center" }));
+  text(ctx, `${FOLD_LO}–${FOLD_HI} BPM window`, BX((FOLD_LO + FOLD_HI) / 2), ay - 26, { size: 9.5, color: C.presence, align: "center" });
+  D.iois.slice(-24).forEach((i, k) => {
+    const raw = 60 / i; if (raw < bl || raw > bh) return;
+    const f = fold(raw);
+    const x0 = BX(raw), x1 = BX(f), y = ay - 4 - (k % 4) * 4;
+    if (Math.abs(x1 - x0) > 3) { ctx.strokeStyle = rgba(C.snare, 0.5); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, y); ctx.quadraticCurveTo((x0 + x1) / 2, y - 26, x1, y); ctx.stroke(); }
+    ctx.fillStyle = Math.abs(x1 - x0) > 3 ? C.snare : C.kick; ctx.beginPath(); ctx.arc(x0, y, 2.4, 0, TAU); ctx.fill();
+  });
+  ctx.strokeStyle = C.fg; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(BX(D.bpm), ay - 22); ctx.lineTo(BX(D.bpm), ay + 8); ctx.stroke();
+  text(ctx, `${D.bpm.toFixed(1)} BPM`, w - pr, 22, { size: 15, align: "right", weight: 500 });
+}
+
+/* ---------- Song map ---------- */
+function drawMap(F) {
+  const { ctx, w, h } = map; ctx.clearRect(0, 0, w, h);
+  const X = t => w * t / SONG_LEN;
+  SECS.forEach(s => {
+    const a = X(s.start * BAR), b = X((s.start + s.bars) * BAR);
+    ctx.fillStyle = rgba(stateColor(s.label), F.t >= s.start * BAR ? 0.55 : 0.28); ctx.fillRect(a, 0, b - a - 1, h);
+    if (b - a > 54) text(ctx, s.label, a + 6, h / 2 + 4, { size: 10.5, color: C.fg });
+  });
+  D.events.forEach(e => { if (e.kind === "drop" || e.kind === "lift") { ctx.fillStyle = C.fg; ctx.fillRect(X(e.t) - 1, h - 8, 2, 8); } });
+  ctx.fillStyle = C.fg; ctx.fillRect(X(F.t) - 1, 0, 2, h);
+}
+
+/* ---------- Loop ---------- */
+const DRAW = { orbit: drawOrbit, terrain: drawTerrain, river: drawRiver, radar: drawRadar, anatomy: drawAnatomy, notes: drawNotes, tempo: drawTempo };
+const R_ = { time: document.getElementById("r-time"), bar: document.getElementById("r-bar"), bpm: document.getElementById("r-bpm"), state: document.getElementById("r-state") };
+function frame(now) {
+  const dtReal = S.lastFrame ? Math.min(0.05, (now - S.lastFrame) / 1000) : 1 / 60;
+  S.lastFrame = now;
+  if (S.playing) {
+    if (S.sound && A.ctx) S.t = A.ctx.currentTime - A.t0; else S.t += dtReal;
+    if (S.t >= SONG_LEN) { warmTo(0); if (S.sound) audioResync(); }
+  }
+  const F = features(Math.max(0, S.t));
+  if (S.playing) {
+    updateDetector(F, dtReal);
+    if (S.t - S.rowT >= 0.06) {
+      S.rowT = S.t;
+      const row = new Float32Array(NB);
+      if (S.sound && A.ctx) audioSpectrum(row); else modelSpectrum(F, row);
+      S.rows.push(row); if (S.rows.length > 44) S.rows.shift();
+    }
+  }
+  for (const v of views) {
+    if (!v.visible || !v.w) continue;
+    v.ctx.clearRect(0, 0, v.w, v.h);
+    DRAW[v.kind](v, F);
+  }
+  drawMap(F);
+  const beat = Math.floor(F.beatsF) % 4 + 1;
+  R_.time.textContent = fmtTime(F.t); R_.bar.textContent = `${F.bar + 1}.${beat}`;
+  R_.bpm.textContent = D.bpm.toFixed(1); R_.state.textContent = D.state;
+  requestAnimationFrame(frame);
+}
+
+/* ---------- Controls ---------- */
+const playBtn = document.getElementById("play"), soundBtn = document.getElementById("sound");
+function setPlaying(p) {
+  S.playing = p; playBtn.textContent = p ? "Pause" : "Play"; playBtn.setAttribute("aria-pressed", String(p));
+  if (A.ctx) { if (p && S.sound) { A.ctx.resume(); audioResync(); } else A.ctx.suspend(); }
+}
+playBtn.addEventListener("click", () => setPlaying(!S.playing));
+soundBtn.addEventListener("click", () => {
+  S.sound = !S.sound; soundBtn.setAttribute("aria-pressed", String(S.sound)); soundBtn.textContent = S.sound ? "Sound on" : "Sound";
+  if (S.sound) { if (!A.ctx) initAudio(); A.ctx.resume(); audioResync(); if (!S.playing) setPlaying(true); }
+  else if (A.ctx) A.ctx.suspend();
+});
+map.cv.addEventListener("click", e => {
+  const r = map.cv.getBoundingClientRect(), target = clamp((e.clientX - r.left) / r.width) * SONG_LEN;
+  warmTo(Math.floor(target / BAR) * BAR + 0.001); if (S.sound) audioResync();
+});
+
+warmTo(START_T);
+if (reduced) setPlaying(false);
+requestAnimationFrame(frame);
+})();
+</script>

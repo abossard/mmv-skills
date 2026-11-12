@@ -1,6 +1,6 @@
 ---
 name: mmv-scene-recipes
-description: Ready scene recipes for Magic Music Visuals with generator scripts and shaders - retro sunset / synthwave (sun, perspective grid, mountains, stars, bloom, CRT; five palettes), calibration pattern, audio spectrum, 3D cube field, kaleidoscope, glitch drop, feedback trails, lyrics overlay, Syphon compositing. Use when asked to build a specific look quickly, when starting the VJ Retro Sunset scene, or when you need a worked end-to-end example of Builder + ISF + audio Globals.
+description: Ready scene recipes for Magic Music Visuals with generator scripts and shaders - retro sunset / synthwave (sun, perspective grid, mountains, stars, bloom, CRT; five palettes), calibration pattern, Music X-Ray (live audio analysis made visible: beat, drops, spectrum, tempo), audio spectrum, 3D cube field, kaleidoscope, glitch drop, feedback trails, lyrics overlay, Syphon compositing. Use when asked to build a specific look quickly, when starting the VJ Retro Sunset scene, or when you need a worked end-to-end example of Builder + ISF + audio Globals.
 ---
 
 # Scene recipes
@@ -12,6 +12,8 @@ Prerequisites: [mmv-core](../mmv-core/SKILL.md), [mmv-audio-reactivity](../mmv-a
 | Recipe | Status | Where |
 |---|---|---|
 | Retro sunset / synthwave (5 palettes) | generated, opens, renders, audio-reactive (verified live) | `scripts/retro_sunset_example.py`, `assets/isf/*.fs`, preview `assets/retro_sunset_preview.png` |
+| Music X-Ray: live analysis made visible (beat orbit, drop radar, spectral terrain, song river, tempo lens) | verified live, tuned on real songs | `scripts/music_xray_example.py`, [references/music-xray.md](references/music-xray.md) |
+| Liquid looks (neon ink, acrylic cells, oil marbling, ink bloom, burst, membrane) | reference analysis only | [references/liquid-analysis.md](references/liquid-analysis.md) |
 | Mapping calibration pattern | verified live | `mmv-output-mapping/scripts/mapping_test_pattern.py` |
 | Audio spectrum bars (ISF FFT + native Spectrum) | verified live | `mmv-shaders-isf-glsl/assets/templates/T_AudioFFT.fs` |
 | 3D cube field (Iterator + Model + DepthTest + MSAA) | verified live | `mmv-3d-geometry` |
