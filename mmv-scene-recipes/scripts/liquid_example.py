@@ -42,7 +42,7 @@ SOLVER_INPUTS = [f("flowRate", "Flow", 1.0, 0.0, 3.0), f("curlAmt", "Swirl", 30.
                  f("exposure", "Exposure", 1.4, 0.1, 6.0), f("bloom", "Bloom", 0.8, 0.0, 4.0),
                  f("bloomThresh", "Bloom Threshold", 0.6, 0.0, 3.0), f("shine", "Shine", 1.0, 0.0, 4.0),
                  f("palette", "Palette", 0.0, 0.0, 1.0),
-                 f("openFlow", "Open Flow", 0.0, 0.0, 1.0), f("pourForce", "Pour Force", 0.0, 0.0, 1.0),
+                 f("openFlow", "Open Flow", 0.0, 0.0, 2.0), f("pourForce", "Pour Force", 0.0, 0.0, 1.0),
                  f("pixelate", "Pixelate", 0.0, 0.0, 64.0), f("zoom", "Zoom", 1.0, 0.25, 4.0),
                  f("zoomKick", "Zoom Kick", 0.0, 0.0, 0.5), f("cloud", "Pixel Cloud", 0.0, 0.0, 1.0), f("cloudSpread", "Cloud Spread", 3.0, 0.0, 10.0),
                  f("cubes", "Cubes", 0.6, 0.0, 1.0),
@@ -60,6 +60,18 @@ LOOKS = {
                        "pressureKeep": 0.97,
                        "splatSize": 0.12, "splatForce": 2.0, "exposure": 2.6, "shine": 1.0,
                        "flare": 0.0, "hdr": 0.0, "pop": 0.0}},
+    "E": {"desc": "Radial burst: a mass source pushes pigment out into fine radial streaks",
+          "inputs": [f("sourceRate", "Source", 13.0, 0.0, 200.0), f("burstRadius", "Burst Radius", 0.07, 0.01, 0.3),
+                     f("burstKick", "Burst Kick", 3.0, 0.0, 8.0), f("burstDrop", "Burst Drop", 7.0, 0.0, 15.0),
+                     f("feed", "Feed", 1.4, 0.0, 4.0), f("spread", "Colour Spread", 0.8, 0.0, 2.0),
+                     f("torque", "Torque", 2.0, 0.0, 20.0), f("stir", "Stir", 0.3, 0.0, 10.0),
+                     f("coreStir", "Core Stir", 0.5, 0.0, 10.0), f("deposit", "Deposit", 8.0, 1.0, 40.0),
+                     f("oilSheen", "Oil Sheen", 0.2, 0.0, 2.0),
+                     f("push", "Push", 3.0, 0.0, 30.0),
+                     f("hdrPop", "HDR Pop", 0.15, 0.0, 1.0), f("popAuto", "Pop Auto", 0.7, 0.0, 1.5)],
+          "defaults": {"curlAmt": 2.0, "viscosity": 0.45, "fade": 0.2, "velFade": 0.35, "swirlKick": 0.6,
+                       "pressureKeep": 0.97, "openFlow": 2.0, "exposure": 2.0, "flowRate": 0.7, "bloom": 0.3, "bloomThresh": 0.9, "flare": 0.0, "hdr": 0.0,
+                       "pop": 0.0, "dropHue": 0.13, "speedLimit": 900.0}},
     "C": {"desc": "Oily fire: buoyant flames with oil streaks",
           "layout": {"pressure": 4, "bloom": False, "phase": 3},
           "inputs": [f("ribbon", "Burner", 0.085, 0.01, 0.3), f("lift", "Lift", 1.2, 0.0, 5.0),
@@ -214,7 +226,7 @@ def build(skills, looks, syphon, size, fps, audio_device, probe_port=None, audio
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out")
-    ap.add_argument("--looks", default="A,C")
+    ap.add_argument("--looks", default="A,C,E")
     ap.add_argument("--first")
     ap.add_argument("--syphon", default="Liquid")
     ap.add_argument("--size", default="1920x1080")

@@ -23,12 +23,13 @@ HDR = "magic_fluid.webm"
 # type -> [(video, seconds)]; picked from tone-mapped contact sheets (ANALYSIS.md times were a few seconds off)
 REFS = {
     "A": [("fluid_sim.webm", t) for t in (100, 160, 170, 260, 380, 390)],
+    "E": [(HDR, t) for t in (140, 141, 142, 144, 146, 148)],
     "C": [(HDR, t) for t in (85, 90, 117, 120, 123, 125)],
 }
 
 
 # which REFS entry the 10 fps motion strip uses per type
-MOTION = {"A": 4, "C": 3}
+MOTION = {"A": 4, "C": 3, "E": 1}
 
 
 def strip(video, t, out, fps=10, n=20):

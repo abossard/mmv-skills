@@ -77,6 +77,7 @@ vec4 lookDye(vec2 uv, vec4 d, float dt) {
 	return d;
 }
 
+float lookSource(vec2 uv) { return 0.0; }
 vec2 lookDrift(vec2 uv) { return vec2(0.0); }
 
 vec3 bloomSource(vec2 uv) { return dyeAt(uv).rgb * exposure; }

@@ -62,6 +62,7 @@ vec4 lookDye(vec2 uv, vec4 d, float dt) {
 	return vec4(min(smoke, 3.0), clamp(hueT, -3.0, 3.0), 0.0, min(d.a, 3.0));
 }
 
+float lookSource(vec2 uv) { return 0.0; }
 vec2 lookDrift(vec2 uv) { return vec2(0.0); }
 vec3 bloomSource(vec2 uv) { return vec3(0.0); }
 

@@ -181,8 +181,8 @@ def live(look, seconds, size=(1920, 1080), fps=60, params=None, tag=None, debug=
     ensure_track()
     d = os.path.join(OUT, tag or look)
     os.makedirs(d, exist_ok=True)
-    for fn in os.listdir(d):
-        if fn.startswith("f_"):
+    for fn in os.listdir(d):                    # stale frames from an earlier run would end up in the sheets
+        if fn.startswith(("f_", "s_")) or fn in ("motion.png", "motion_ours.png", "sheet.png"):
             os.remove(os.path.join(d, fn))
     name, before = current_project()
     print("magic had open:", before or name)
@@ -423,7 +423,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["static", "live", "report", "all", "restore"])
     ap.add_argument("look", nargs="?")
-    ap.add_argument("--looks", default="A,C")
+    ap.add_argument("--looks", default="A,C,E")
     ap.add_argument("--seconds", type=float, default=50)
     ap.add_argument("--size", default="1920x1080")
     ap.add_argument("--fps", type=int, default=60)

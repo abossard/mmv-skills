@@ -38,8 +38,9 @@ vec4 dyeAt(vec2 uv) { return clean(IMG_NORM_PIXEL(dye, uv)); }
 vec2 SIMTX() { return 1.0 / IMG_SIZE(vel); }
 float pLastRaw(vec2 uv);       // generated: the solved pressure
 float pPrev(int k, vec2 uv);   // generated: what pressure pass k reads
-// open flow (openFlow = 1): left and right edges are open water at pressure 0, so a pour can run through the frame
-bool outsideX(vec2 uv) { return openFlow > 0.5 && (uv.x < 0.0 || uv.x > 1.0); }
+// open flow: Open Flow = 1 opens the left and right edges (water at pressure 0, a pour runs through the frame),
+// Open Flow = 2 opens all four edges (a source in the middle can push fluid out on every side)
+bool outsideX(vec2 uv) { return (openFlow > 0.5 && (uv.x < 0.0 || uv.x > 1.0)) || (openFlow > 1.5 && (uv.y < 0.0 || uv.y > 1.0)); }
 float pAt(int k, vec2 uv) { return outsideX(uv) ? 0.0 : pPrev(k, uv); }
 float pLast(vec2 uv) { return outsideX(uv) ? 0.0 : pLastRaw(uv); }
 
@@ -109,6 +110,8 @@ void passForce() {
 	gl_FragColor = vec4(clamp(v, -3000.0, 3000.0), 0.0, 1.0);
 }
 
+float lookSource(vec2 uv);      // the look's mass source (cells per second per cell), 0 for most looks
+
 void passDiv() {
 	vec2 uv = isf_FragNormCoord, t = SIMTX();
 	vec2 C = velFAt(uv);
@@ -117,9 +120,10 @@ void passDiv() {
 	// closed box: the wall reflects the normal component
 	if (uv.x - t.x < 0.0) L = openFlow > 0.5 ? C.x : -C.x;     // open edge: the flow passes through
 	if (uv.x + t.x > 1.0) R = openFlow > 0.5 ? C.x : -C.x;
-	if (uv.y + t.y > 1.0) T = -C.y;
-	if (uv.y - t.y < 0.0) B = -C.y;
-	gl_FragColor = vec4(0.5 * (R - L + T - B), 0.0, 0.0, 1.0);
+	if (uv.y + t.y > 1.0) T = openFlow > 1.5 ? C.y : -C.y;
+	if (uv.y - t.y < 0.0) B = openFlow > 1.5 ? C.y : -C.y;
+	// minus the look's mass source: the projection then leaves div(v) = source, so fluid streams out of it
+	gl_FragColor = vec4(0.5 * (R - L + T - B) - lookSource(uv), 0.0, 0.0, 1.0);
 }
 
 // Pressure pass k = two Jacobi iterations in one pass (13-point stencil of the buffer it reads).

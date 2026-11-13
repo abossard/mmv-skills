@@ -60,11 +60,9 @@ def main():
                 g[k] = (raw[o] + 2 * raw[o + 1] + raw[o + 2]) >> 2
                 k += 1
         frames.append([now, g.hex()])
-        if seq and now - t0 >= seq[0]:
+        while seq and now - t0 >= seq[0]:      # a late frame fills every slot it passed: the strip always has all frames
             with open(os.path.join(out, "s_%06.2f.bgra" % seq.pop(0)), "wb") as fh:
                 fh.write(bytes(raw) if stride == w * 4 else b"".join(bytes(raw[y * stride:y * stride + w * 4]) for y in range(h)))
-            while seq and now - t0 >= seq[0]:
-                seq.pop(0)
         while pngs and now - t0 >= pngs[0]:
             tag = pngs.pop(0)
             with open(os.path.join(out, "f_%06.2f.bgra" % tag), "wb") as fh:

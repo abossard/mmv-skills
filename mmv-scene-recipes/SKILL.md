@@ -13,7 +13,7 @@ Prerequisites: [mmv-core](../mmv-core/SKILL.md), [mmv-audio-reactivity](../mmv-a
 |---|---|---|
 | Retro sunset / synthwave (5 palettes) | generated, opens, renders, audio-reactive (verified live) | `scripts/retro_sunset_example.py`, `assets/isf/*.fs`, preview `assets/retro_sunset_preview.png` |
 | Music X-Ray: live analysis made visible (beat orbit, drop radar, spectral terrain, song river, tempo lens) | verified live, tuned on real songs | `scripts/music_xray_example.py`, [references/music-xray.md](references/music-xray.md) |
-| Liquid looks: GPU fluid (neon ink jets, oily fire with smoke), audio driven, with dev harness | verified live, 1080p 200+ fps | `scripts/liquid_example.py`, [references/liquid.md](references/liquid.md), analysis [references/liquid-analysis.md](references/liquid-analysis.md) |
+| Liquid looks: GPU fluid (neon ink jets, oily fire with smoke, radial burst), audio driven, with dev harness | verified live, 1080p 110-260 fps | `scripts/liquid_example.py`, [references/liquid.md](references/liquid.md), analysis [references/liquid-analysis.md](references/liquid-analysis.md) |
 | Mapping calibration pattern | verified live | `mmv-output-mapping/scripts/mapping_test_pattern.py` |
 | Audio spectrum bars (ISF FFT + native Spectrum) | verified live | `mmv-shaders-isf-glsl/assets/templates/T_AudioFFT.fs` |
 | 3D cube field (Iterator + Model + DepthTest + MSAA) | verified live | `mmv-3d-geometry` |
